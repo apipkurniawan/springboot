@@ -2,6 +2,7 @@ package apipspring.restful.controller;
 
 import apipspring.restful.entity.User;
 import apipspring.restful.model.RegisterUserRequest;
+import apipspring.restful.model.UpdateUserRequest;
 import apipspring.restful.model.UserResponse;
 import apipspring.restful.model.WebResponse;
 import apipspring.restful.repository.UserRepository;
@@ -165,6 +166,61 @@ class UserControllerTest {
             });
 
             assertNotNull(response.getErrors());
+        });
+    }
+
+    @Test
+    void updateUserUnauthorized() throws Exception {
+        UpdateUserRequest request = new UpdateUserRequest();
+
+        mockMvc.perform(
+                patch("/api/users/current")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+        ).andExpectAll(
+                status().isUnauthorized()
+        ).andDo(result -> {
+            WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+
+            assertNotNull(response.getErrors());
+        });
+    }
+
+    @Test
+    void updateUserSuccess() throws Exception {
+        User user = new User();
+        user.setUsername("test");
+        user.setPassword(BCrypt.hashpw("rahasia", BCrypt.gensalt()));
+        user.setName("Test");
+        user.setToken("test");
+        user.setTokenExpiredAt(System.currentTimeMillis() + 10000000000L);
+        userRepository.save(user);
+
+        UpdateUserRequest request = new UpdateUserRequest();
+        request.setName("Apip");
+        request.setPassword("apip123");
+
+        mockMvc.perform(
+                patch("/api/users/current")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .header("X-API-TOKEN", "test")
+        ).andExpectAll(
+                status().isOk()
+        ).andDo(result -> {
+            WebResponse<UserResponse> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+
+            assertNull(response.getErrors());
+            assertEquals("Apip", response.getData().getName());
+            assertEquals("test", response.getData().getUsername());
+
+            User userDb = userRepository.findById("test").orElse(null);
+            assertNotNull(userDb);
+            assertTrue(BCrypt.checkpw("apip123", userDb.getPassword()));
         });
     }
 
