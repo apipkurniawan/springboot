@@ -4,6 +4,7 @@ import apipspring.restful.entity.Contact;
 import apipspring.restful.entity.User;
 import apipspring.restful.model.ContactResponse;
 import apipspring.restful.model.CreateContactRequest;
+import apipspring.restful.model.UpdateContactRequest;
 import apipspring.restful.repository.ContactRepository;
 // import jakarta.transaction.Transactional;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,7 +39,6 @@ public class ContactService {
         contacRepository.save(contact);
 
         return toContactResponse(contact);
-
     }
 
     private ContactResponse toContactResponse(Contact contact) {
@@ -55,6 +55,23 @@ public class ContactService {
     public ContactResponse get(User user, String id) {
         Contact contact = contacRepository.findFirstByUserAndId(user, id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contact not found"));
+
+        return toContactResponse(contact);
+    }
+
+    @Transactional
+    public ContactResponse update(User user, UpdateContactRequest request) {
+        validationService.validate(request);
+
+        Contact contact = contacRepository.findFirstByUserAndId(user, request.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contact not found"));
+
+        contact.setFirstName(request.getFirstName());
+        contact.setLastName(request.getLastName());
+        contact.setEmail(request.getEmail());
+        contact.setPhone(request.getPhone());
+
+        contacRepository.save(contact);
 
         return toContactResponse(contact);
     }
