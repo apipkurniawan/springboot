@@ -5,9 +5,12 @@ import apipspring.restful.entity.User;
 import apipspring.restful.model.ContactResponse;
 import apipspring.restful.model.CreateContactRequest;
 import apipspring.restful.repository.ContactRepository;
-import jakarta.transaction.Transactional;
+// import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
 
@@ -34,6 +37,11 @@ public class ContactService {
 
         contacRepository.save(contact);
 
+        return toContactResponse(contact);
+
+    }
+
+    private ContactResponse toContactResponse(Contact contact) {
         return ContactResponse.builder()
                 .id(contact.getId())
                 .firstName(contact.getFirstName())
@@ -41,6 +49,13 @@ public class ContactService {
                 .email(contact.getEmail())
                 .phone(contact.getPhone())
                 .build();
+    }
 
+    @Transactional(readOnly = true)
+    public ContactResponse get(User user, String id) {
+        Contact contact = contacRepository.findFirstByUserAndId(user, id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contact not found"));
+
+        return toContactResponse(contact);
     }
 }
